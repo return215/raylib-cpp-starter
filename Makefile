@@ -1,4 +1,6 @@
 # Copyright (c) 2020 Jonathan Moallem (@J-Mo63) & Aryeh Zinn (@Raelr)
+# 
+# Modifications made by @return215 to fit customized workflow
 #
 # This code is released under an unmodified zlib license.
 # For conditions of distribution and use, please see:
@@ -10,19 +12,22 @@ platformpth = $(subst /,$(PATHSEP),$1)
 
 # Set global macros
 buildDir := bin
+objDir := obj
+srcDir := src
 executable := app
-target := $(buildDir)/$(executable)
-sources := $(call rwildcard,src/,*.cpp)
-objects := $(patsubst src/%, $(buildDir)/%, $(patsubst %.cpp, %.o, $(sources)))
+libDir = lib/$(platform)
+target = $(buildDir)/$(platform)/$(executable)
+sources := $(call rwildcard,$(srcDir)/,*.cpp)
+objects := $(patsubst src/%, $(objDir)/%, $(patsubst %.cpp, %.o, $(sources)))
 depends := $(patsubst %.o, %.d, $(objects))
 compileFlags := -std=c++17 -I include
-linkFlags = -L lib/$(platform) -l raylib
+linkFlags = -L $(libDir) -l raylib
 
 # Check for Windows
 ifeq ($(OS), Windows_NT)
 	# Set Windows macros
-	platform := Windows
-	CXX ?= g++
+	platform := windows
+	CXX ?= clang++
 	linkFlags += -Wl,--allow-multiple-definition -pthread -lopengl32 -lgdi32 -lwinmm -mwindows -static -static-libgcc -static-libstdc++
 	libGenDir := src
 	THEN := &&
@@ -35,13 +40,13 @@ else
 	UNAMEOS := $(shell uname)
 	ifeq ($(UNAMEOS), Linux)
 		# Set Linux macros
-		platform := Linux
-		CXX ?= g++
+		platform := linux
+		CXX ?= clang++
 		linkFlags += -l GL -l m -l pthread -l dl -l rt -l X11
 	endif
 	ifeq ($(UNAMEOS), Darwin)
 		# Set macOS macros
-		platform := macOS
+		platform := mac
 		CXX ?= clang++
 		linkFlags += -framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL
 		libGenDir := src
@@ -58,8 +63,10 @@ endif
 # Lists phony targets for Makefile
 .PHONY: all setup submodules execute clean
 
-# Default target, compiles, executes and cleans
-all: $(target) execute clean
+# Default target, compiles
+all: build
+
+build: $(target)
 
 # Sets up the project for compiling, generates includes and libs
 setup: include lib
@@ -78,25 +85,33 @@ include: submodules
 # Build the raylib static library file and copy it into lib
 lib: submodules
 	cd vendor/raylib/src $(THEN) "$(MAKE)" PLATFORM=PLATFORM_DESKTOP
-	$(MKDIR) $(call platformpth, lib/$(platform))
+	$(MKDIR) $(call platformpth, $(libDir))
 	$(call COPY,vendor/raylib/$(libGenDir),lib/$(platform),libraylib.a)
 
 # Link the program and create the executable
 $(target): $(objects)
+	$(MKDIR) $(call platformpth, $(@D))
 	$(CXX) $(objects) -o $(target) $(linkFlags)
 
 # Add all rules from dependency files
 -include $(depends)
 
 # Compile objects to the build directory
-$(buildDir)/%.o: src/%.cpp Makefile
+$(objDir)/%.o: src/%.cpp Makefile
 	$(MKDIR) $(call platformpth, $(@D))
 	$(CXX) -MMD -MP -c $(compileFlags) $< -o $@ $(CXXFLAGS)
 
 # Run the executable
-execute:
+run:
 	$(target) $(ARGS)
 
 # Clean up all relevant files
 clean:
 	$(RM) $(call platformpth, $(buildDir)/*)
+	$(RM) $(call platformpth, $(objDir)/*)
+
+clean-lib:
+	$(RM) $(call platformpth, $(libDir)/*)
+	$(RM) $(call platformpth, vendor/raylib-cpp/vendor/raylib/$(libGenDir)/libraylib.a)
+	$(RM) $(call platformpth, vendor/raylib-cpp/vendor/raylib/$(libGenDir)/*.o)
+	$(RM) $(call platformpth, vendor/raylib-cpp/vendor/raylib/src/*.o)
