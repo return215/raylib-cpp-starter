@@ -27,7 +27,7 @@ linkFlags = -L $(libDir) -l raylib
 ifeq ($(OS), Windows_NT)
 	# Set Windows macros
 	platform := windows
-	CXX ?= clang++
+	CXX ?= g++
 	linkFlags += -Wl,--allow-multiple-definition -pthread -lopengl32 -lgdi32 -lwinmm -mwindows -static -static-libgcc -static-libstdc++
 	libGenDir := src
 	THEN := &&
@@ -41,7 +41,7 @@ else
 	ifeq ($(UNAMEOS), Linux)
 		# Set Linux macros
 		platform := linux
-		CXX ?= clang++
+		CXX ?= g++
 		linkFlags += -l GL -l m -l pthread -l dl -l rt -l X11
 	endif
 	ifeq ($(UNAMEOS), Darwin)
@@ -61,10 +61,10 @@ else
 endif
 
 # Lists phony targets for Makefile
-.PHONY: all setup submodules execute clean
+.PHONY: all setup submodules build run clean clean-lib
 
 # Default target, compiles
-all: build
+all: setup build
 
 build: $(target)
 
@@ -97,7 +97,7 @@ $(target): $(objects)
 -include $(depends)
 
 # Compile objects to the build directory
-$(objDir)/%.o: src/%.cpp Makefile
+$(objDir)/%.o: $(srcDir)/%.cpp Makefile
 	$(MKDIR) $(call platformpth, $(@D))
 	$(CXX) -MMD -MP -c $(compileFlags) $< -o $@ $(CXXFLAGS)
 
@@ -110,8 +110,8 @@ clean:
 	$(RM) $(call platformpth, $(buildDir)/*)
 	$(RM) $(call platformpth, $(objDir)/*)
 
+# Clean up raylib ilbs and includes
 clean-lib:
 	$(RM) $(call platformpth, $(libDir)/*)
-	$(RM) $(call platformpth, vendor/raylib-cpp/vendor/raylib/$(libGenDir)/libraylib.a)
-	$(RM) $(call platformpth, vendor/raylib-cpp/vendor/raylib/$(libGenDir)/*.o)
-	$(RM) $(call platformpth, vendor/raylib-cpp/vendor/raylib/src/*.o)
+	$(RM) $(call platformpth, include/*)
+	cd vendor/raylib-cpp/vendor/raylib/src $(THEN) "$(MAKE)" clean
