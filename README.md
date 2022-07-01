@@ -18,7 +18,7 @@ So that being said, we hope that this repository finds you well and wholehearted
 | ----------- | ---------------- | ------------------- | ---------------------------------------------------- |
 | **macOS**   | Clang++          | `Big Sur 11.0.1`    | ![macOS Status](../../workflows/macOS/badge.svg)     |
 | **Linux**   | G++              | `Ubuntu 20.04 LTS`  | ![Linux Status](../../workflows/Ubuntu/badge.svg)    |
-| **Windows** | MinGW (G++)      | `Windows 10 19041`  | ![Windows Status](../../workflows/Windows/badge.svg) |
+| **Windows** | MinGW (G++)      | `Windows 10 20348 22H1`  | ![Windows Status](../../workflows/Windows/badge.svg) |
 
 ## Getting Started
 

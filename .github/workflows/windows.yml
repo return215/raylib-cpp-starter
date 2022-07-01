@@ -12,29 +12,23 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v2
-      
-    - name: make setup
+    - name: Setting up
       run: mingw32-make setup
       shell: cmd
-      
-    - name: make bin/app
-      run: mingw32-make bin/app
+    - name: Building with default compiler (G++/GCC)
+      run: mingw32-make build
       shell: cmd
-      
-    - name: 'export binary'
+    - name: 'Export binary'
       uses: actions/upload-artifact@v2
       with:
           name: app.exe
-          path: bin/app.exe
-      
-    - name: make clean
+          path: bin/windows/app.exe
+    - name: "Cleaning up for freesh build"
       run: mingw32-make clean
       shell: cmd
-
-    - name: make bin/app CXX=g++
-      run: mingw32-make bin/app CXX=g++
+    - name: "Building with Clang++"
+      run: mingw32-make build CXX=clang++
       shell: cmd
-  
-    - name: make clean
-      run: mingw32-make clean
+    - name: "Final cleaning"
+      run: mingw32-make clean && mingw32-make clean-lib
       shell: cmd
