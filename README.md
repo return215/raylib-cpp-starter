@@ -1,4 +1,7 @@
 # Raylib C++ Starter
+
+[![Open in Remote - Containers](https://img.shields.io/static/v1?label=Remote%20-%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/return215/raylib-cpp-starter)
+
 The Raylib C++ Starter kit is a template project that provides a simple starter template for the [raylib](https://github.com/raysan5/raylib) game tools library incorporating the [raylib-cpp](https://github.com/robloach/raylib-cpp) C++ bindings and using [Make](https://www.gnu.org/software/make/) for building. The starter kit can automatcially clone down raylib and the bindings, compile them, and setup the project for separate compilation using a static library.
 
 > Why static linking?
@@ -14,6 +17,7 @@ I guess we just don't want the added headache. CMake is complex and sometimes fe
 So that being said, we hope that this repository finds you well and wholeheartedly enjoying the *simple things in life* (i.e. video games programming).
 
 ### Current Compatibility
+
 | OS          | Default Compiler |  Last Manual Build  |                   Compile Status                     |
 | ----------- | ---------------- | ------------------- | ---------------------------------------------------- |
 | **macOS**   | Clang++          | `Big Sur 11.0.1`    | ![macOS Status](../../workflows/macOS/badge.svg)     |
@@ -22,49 +26,56 @@ So that being said, we hope that this repository finds you well and wholehearted
 
 ## Getting Started
 
+### Using a Dev Container
+
+If you have any experience with Docker, you can try it out using a dev container. A "development container" is a container volume with all of the needed tools and dependencies already installed. Using a dev container may simplify your setup because everything comes in a single "box" without messing around your operating system.
+
+Using a dev container requires VS Code and Docker to be installed (I have tried Podman and it has some issues, will fix later). Once they are installed, you can click the badge above or [here](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/return215/raylib-cpp-starter) to get started. Clicking these links will launch VS Code and install the "Remote - Containers" extension if needed, clone the source code into a container volume, and spin up a dev container for use.
+
 ### Installing Dependencies
 
 Before building the project, you will need to install all relevant dependencies for your platform so that the project has access to all the tools required, and raylib can compile and link correctly. You can find intructions for installing dependencies on macOS, Linux, and Windows in the [docs file on installing dependencies](docs/InstallingDependencies.md).
 
 ### Building the Project
-Once you have cloned this repository and installed dependencies, building the project is as simple as running these two commands in its root directory:
+
+Once you have cloned this repository and installed dependencies, building the project is as simple as running two commands in a single line in its root directory:
 
 #### macOS & Linux
 ```console
-$ make setup
-$ make
+$ make && make run
 ```
 
 #### Windows
 ```console
-> mingw32-make setup
-> mingw32-make
+> mingw32-make && mingw32-make run
 ```
 
-The first command will clone in the lastest C++ bindings and targeted version of raylib, copy across any relevant header files into `/includes`, and build a static library file from them, placing it in `/lib`. The second command then compiles, runs and cleans up your project using the source code in `/src/main.cpp`.
+The command will first clone in the lastest C++ bindings and targeted version of raylib, copy across any relevant header files into `/includes`, and build a static library file from them, placing it in `/lib`. Then it compiles your project using the source code in `/src/main.cpp`. Finally, the second command will try to run the compiled program, but only if the compilation is successful.
 
 *If a window pops up, congratulations, you've successfully built the project and you can now start programming your game!*
 
 ## Using This Template
+
 Now that you have the project setup and compiling on your system, it's time to start programming! If you aren't already familliar with [raylib](https://github.com/raysan5/raylib), we recommend looking over [this awesome cheatsheet](https://www.raylib.com/cheatsheet/cheatsheet.html) which lists every function, struct and macro available in the raylib C library. If you want specifics on how to use the C++ bindings, then you should check out the [raylib-cpp](https://github.com/robloach/raylib-cpp) repo, which nicely explains how the bindings work and contains [raylib's examples ported to C++](https://github.com/RobLoach/raylib-cpp/tree/master/examples).
 
 Once you're up and running, we first of all recommend that all your code for the game should go into the `/src` directory, which is automatically included in the compile process when you run Make. The default entry point for the program is `/src/main.cpp` (which is pretty standard). If you wish to change the program entry point, add more libraries, or really anything about your project, all build instructions are specified in the [`Makefile`](Makefile) - no smoke and mirrors!
 
 ### Making Use of Separate Compilation
+
 When building compiled applications from scratch, *each* source file needs to be compiled into an object file in order for them all to be linked together as a full program. This can become rather time-consuming and inefficient as your codebase expands to use tens or even hundreds of files that recompile each time you build. Fortunately, with a few clever rules in our [`Makefile`](Makefile), we can be sure to only have to recompile files affected by our changes.
 
-By using the following Make commands instead of the default target, we can skip the cleanup step, and only recompile files that changed:
+By using the following Make commands instead of the default target, we can skip the cleanup and setup step, and only recompile files that changed:
 
 #### macOS & Linux
 
 ```console
-$ make bin/app; make execute
+$ make build && make run
 ```
 
 #### Windows
 
 ```console
-> mingw32-make bin/app && mingw32-make execute
+> mingw32-make build && mingw32-make run
 ```
 
 Using this method can save you a huge amount of time compiling *(in reality, just a few seconds)* each time you make a small change to your code! If you want to know more about how it works, you should have a read through [the docs entry explaining the Makefile](docs/MakefileExplanation.md).
@@ -77,21 +88,23 @@ While separate compilation works quite well in most scenarios, it's not magic, a
 4. Placing includes in `.h` files instead of forward-declarations will also increase recursive includes and therefore the build time
 
 ### Passing Args to the Executable
+
 For working with some projects, you may want to pass arguments to the program once it's been built. This can be achieved by assigning values to the `ARGS` flag in the Makefile like below:
 
 #### macOS & Linux
 
 ```console
-$ make ARGS="--somearg"
+$ make run ARGS="--somearg"
 ```
 
 #### Windows
 
 ```console
-> mingw32-make ARGS="--somearg"
+> mingw32-make run ARGS="--somearg"
 ```
 
 ### Specifying Custom Macro Definitions
+
 You may also want to pass in your own macro definitions for certain configurations (such as setting log levels). You can pass in your definitions using `CXXFLAGS`:
 
 #### macOS & Linux
@@ -107,6 +120,7 @@ $ make CXXFLAGS=-DMY_MACRO=1
 ```
 
 ### Specifying a Non-Default Compiler
+
 If you want to use a compiler for your platform that isn't the default for your system (or potentially you would like to explicitly state it), you can make use of the system-implicit `CXX` variable like so:
 
 #### macOS & Linux
@@ -124,6 +138,7 @@ $ make CXX=g++
 ## Contributing
 
 ### How do I contribute?
+
 It's pretty simple actually:
 
 1. Fork it from [here](https://github.com/CapsCollective/raylib-cpp-starter/fork)
