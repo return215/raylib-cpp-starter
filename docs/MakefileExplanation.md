@@ -28,28 +28,32 @@ The "global" macros are platform-agnostic values that are mostly used for defini
 
 ```Makefile
 buildDir := bin
+objDir := obj
+srcDir := src
 executable := app
-target := $(buildDir)/$(executable)
-sources := $(call rwildcard,src/,*.cpp)
-objects := $(patsubst src/%, $(buildDir)/%, $(patsubst %.cpp, %.o, $(sources)))
+libDir = lib/$(platform)
+target = $(buildDir)/$(platform)/$(executable)
+sources := $(call rwildcard,$(srcDir)/,*.cpp)
+objects := $(patsubst src/%, $(objDir)/%, $(patsubst %.cpp, %.o, $(sources)))
 depends := $(patsubst %.o, %.d, $(objects))
 compileFlags := -std=c++17 -I include
-linkFlags = -L lib/$(platform) -l raylib
+linkFlags = -L $(libDir) -l raylib
 ifdef MACRO_DEFS
     macroDefines := -D $(MACRO_DEFS)
 endif
 ```
 
-In this snippet there are two different assignment operators used, `:=` meaning "instant, static assign", and `=` meaning lazy assign, where the macro will only be assigned on use (this is useful when it relies on another macro that may not yet be defined). The operator `?=` is also used in cases where assignment is contingent on the variable being previously undefined. Finally, the `+=` operator is used to append content to a previously defined macro. At the very end, it checks to see if any macros were defined in the `Makefile` declaration and adds them to our compilation steps.
+In this snippet there are two different assignment operators used, `:=` meaning "instant, static assign", and `=` meaning lazy assign, where the macro will only be assigned on use (this is useful when it relies on another macro that may not yet be defined). The operator `?=` is also used in cases where assignment is contingent on the variable being previously undefined. Finally, the `+=` operator is used to append content to a previously defined macro. At the very end, it checks to see if any macros were defined in the `Makefile` declaration and adds them to our compilation steps (*apparently thischeck  is missing in upstream*).
 
 ### Platform-Specific Macros
 The final grouping of macros in the Makefile relate to those that differ on a per-platform basis. The structure uses nested if-statements to first determine whether the current platform is Windows or not to assign macros. If it is not Windows, it then checks whether the current platform is Linux or macOS and assigns macros accordingly.
 
 ```Makefile
+# Check for Windows
 ifeq ($(OS), Windows_NT)
 	# Set Windows macros
-	platform := Windows
-	CXX ?= g++
+	platform := windows
+	CXX ?= clang++
 	linkFlags += -Wl,--allow-multiple-definition -pthread -lopengl32 -lgdi32 -lwinmm -mwindows -static -static-libgcc -static-libstdc++
 	libGenDir := src
 	THEN := &&
@@ -62,13 +66,13 @@ else
 	UNAMEOS := $(shell uname)
 	ifeq ($(UNAMEOS), Linux)
 		# Set Linux macros
-		platform := Linux
-		CXX ?= g++
+		platform := linux
+		CXX ?= clang++
 		linkFlags += -l GL -l m -l pthread -l dl -l rt -l X11
 	endif
 	ifeq ($(UNAMEOS), Darwin)
 		# Set macOS macros
-		platform := macOS
+		platform := mac
 		CXX ?= clang++
 		linkFlags += -framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL
 		libGenDir := src
@@ -92,7 +96,7 @@ This section describes most of the Makefile's functionality by explaning of the 
 The `.PHONY` target is a special target in the world of Makefile, and is specifically used to note which targets "exist" and which are "phony". A target should theoretically refer to (in dev terms) an actual file or directory requirement of the project's build system (e.g. a static library file to link to the app), and so Make does some useful work in the background to work out whether changes have been made to certain files, running targets of only files that have had their dependencies changed since last run. In a more realistic sense, Make also recognises that not all targets will refer to real world files, and can be exluded from this "run only if new changes" behaviour using the `.PHONY` target.
 
 ```Makefile
-.PHONY: all setup submodules execute clean
+.PHONY: all setup submodules build run clean clean-lib
 ```
 
 So as you can see above, the first target of the file lists all the other "phony" targets in the file as dependencies.
@@ -101,17 +105,20 @@ So as you can see above, the first target of the file lists all the other "phony
 The first target we get you to call before building the project is `setup`, which essentially pulls in all raylib and raylib-cpp dependencies, and then formats the project file structure.
 
 As you can see below, the target simply depends on two sub-targets, `include` and `lib`:
+
 ```Makefile
 setup: include lib
 ```
 
 However, looking at `include`, we can see that it depends on `submodules`, so we'll look at that first.
+
 ```Makefile
 include: submodules
 	...
 ```
 
 `submodules` is a very simple target that will update the git submodules in the project recursively, pulling in the current raylib-cpp repository under the `/vendor` directory and then raylib itself under its own `/vendor` directory. The reason for this, is to make sure that the pulled versions of raylib and the bindings match in version. You can [read more about git submodules here](https://git-scm.com/book/en/v2/Git-Tools-Submodules).
+
 ```Makefile
 submodules:
 	git submodule update --init --recursive
@@ -122,6 +129,7 @@ Having satisfied `submodules` and now returning to `include`, we can being to ru
 It begins by creating the `/include` directory (converting the directory path for Windows if necessary with the custom `platformpth` function) if it doesn't already exist. 
 
 Next, the target proceeds to call another custom function, `COPY` (a platform agnostic copy command), manually copying `raylib.h` and `raymath.h` from raylib's source code, and all files ending with `.hpp` from raylib-cpp's source code, into the newly created `/include` directory.
+
 ```Makefile
 include: submodules
 	$(MKDIR) $(call platformpth, ./include)
@@ -137,32 +145,41 @@ Next, we create the `/lib` directory (and a subdirectory for your current platfo
 Moving on to the body of the target, we move into raylib's `/src` directory and immediately run Make on raylib. Once complete, this results in the creation of a static library file named `libraylib.a` (*which will appear in slightly different directories based on the platform you build it in for whatever reason...*).
 
 To complete the target, it then copies that library file into the relevant directory for your platform under `/lib`.
+
 ```Makefile
 lib: submodules
 	cd vendor/raylib-cpp/vendor/raylib/src $(THEN) "$(MAKE)" PLATFORM=PLATFORM_DESKTOP
-	$(MKDIR) $(call platformpth, lib/$(platform))
-	$(call COPY,vendor/raylib-cpp/vendor/raylib/$(libGenDir),lib/$(platform),libraylib.a)
+	$(MKDIR) $(call platformpth, $(libDir))
+	$(call COPY,vendor/raylib-cpp/vendor/raylib/$(libGenDir),$(libDir),libraylib.a)
 ```
 
 Once all of these targets have been fulfilled, `setup` ends and your project should now contain a copy of the relevant static library for your platform in `/lib`, and all the necessary header files under `/include`.
 
 ### all
-The target name `all` is used as a common convention as being the default target in any Makefile, and what makes it default is that it's the first target defined (aside from the the reserved target of `.PHONY`). In our case we consider the default behaviour of our build system as compiling, running and then cleaning up the build, avoiding including the steps defined in `setup`.
+The target name `all` is used as a common convention as being the default target in any Makefile, and what makes it default is that it's the first target defined (aside from the the reserved target of `.PHONY`). In our case we consider the default behaviour of our build system as setting up the libraries and compiling the build. We intend that a single invocation of `make` runs all the necessary build steps from start to finish in only one word.
 
-The first line of the target simply lists its dependencies in order of execution: the application target (with its name defined by the `target` variable), the `execute` target to run the program, and finally `clean` to tidy up post-build.
+The first line of the target simply lists its dependencies in order of execution: in this case is the setup and build step. `run` and `clean` targets are deliberately not included, reasons follow in their respective sections.
+
 ```Makefile
-all: $(target) execute clean
+all: build
 ```
 
-The application target is first to run, and contains the instruction of compiling the program into the `target` file using the defined `CXX` command on a series of object files and linker flags. However this also contains a number of prerequisites as all object files list in `objects` must exist and be up to date. With this being the case, the Makefile will run the relevant target for each object file.
+### build
+
+The build target is very straightforward, it compiles the application target and contains the instruction of compiling the program into the `target` file using the defined `CXX` command on a series of object files and linker flags. However this also contains a number of prerequisites as all object files list in `objects` must exist and be up to date. With this being the case, the Makefile will run the relevant target for each object file.
+
 ```Makefile
+build: $(target)
+
 $(target): $(objects)
+	$(MKDIR) $(call platformpth, $(@D))
 	$(CXX) $(objects) -o $(target) $(linkFlags)
 ```
 
-As such, the target `$(buildDir)/%.o` is responsible for ensuring the creation and update of object files (`.o` files). The target will create all necessary subdirectory structures needed for the files, and then compile each `.cpp` file in the source directory into an object file using a number of rather terse, [automatic variables that you can read up on here](https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html). Finally, it includes any custom macros that we defined for each of these files. 
+As such, the target `$(objDir)/%.o` is responsible for ensuring the creation and update of object files (`.o` files). The target will create all necessary subdirectory structures needed for the files, and then compile each `.cpp` file in the source directory into an object file using a number of rather terse, [automatic variables that you can read up on here](https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html). Finally, it includes any custom macros that we defined for each of these files. 
+
 ```Makefile
-$(buildDir)/%.o: src/%.cpp Makefile
+$(objDir)/%.o: $(srcDir)/%.cpp Makefile
 	$(MKDIR) $(call platformpth, $(@D))
 	$(CXX) -MMD -MP -c $(compileFlags) $< -o $@ $(macroDefines)
 ```
@@ -171,23 +188,45 @@ That all being said, there are still two dependancies for the target, the `.cpp`
 This is where things get a little hairy. There is a common scenario where one might change a `.cpp` or `.h` file that is included by another, and as such the changed file will recompile, but none that depend on it. So how can we track this dependency? The answer is by cheating, using the power of the C/C++ compiler. The flags `-MMD` and `-MP` in the compile command tell the compiler to automatically generate a list of file dependency targets for each file as it goes. These files are then output to the `/bin/` directory alongside their matching `.o` files for later reference, containing automatically generated Makefile targets.
 
 One might ask how these are then read back in and used, well that is done with another piece of Makefile magic: the `include` command, which when added to a Makefile, will import the content of any specified file to its body. The below command is entirely responsible for doing this, and the output of the operation is ignored by prefacing it with a dash.
+
 ```Makefile
 -include $(depends)
 ```
+
 Now, finally returning from two levels of indirection in targets, the program can come back to the application target and link the newly generated and updated object files into the program, alongside any raylib and binding components.
+
 ```Makefile
 $(target): $(objects)
+	$(MKDIR) $(call platformpth, $(@D))
 	$(CXX) $(objects) -o $(target) $(linkFlags)
 ```
 
-After this, the execute target will simply attempt to run the program from the command line with any supplied arguments.
+### run
+
+The `run` target will simply attempt to run the program from the command line with any supplied arguments. This is not part of default target because we do not want to run the app during standard build procedure. Instead, we want the compiled program to run on demand.
+
 ```Makefile
-execute:
+run:
 	$(target) $(ARGS)
 ```
 
-Once the application is closed, crashed, or otherwise ended, the clean command will then be run (for the appropriate platform path and command), by deleting the `/bin/` directory, including object files, dependency files and the application itself. This prepares the build system for a fresh compilation.
+### clean
+
+The `clean` target will be run (for the appropriate platform path and command), by deleting the `/bin/` and `/obj/` directory, including object files, dependency files and the application itself. This prepares the build system for a fresh compilation. TO avoid recompiling in every program execution, this target is not included in `all`.
+
 ```Makefile
 clean:
 	$(RM) $(call platformpth, $(buildDir)/*)
+	$(RM) $(call platformpth, $(objDir)/*)
+```
+
+### clean-lib
+
+If, for whatever reason, one would like to recompile raylib from scratch, the target `clean-lib` is provided. This will clean up `/lib/` and `/include/` as well as any build artifacts from raylib itself. For the latter, we utilize raylib's Makefile for cleaning.
+
+```Makefile
+clean-lib:
+	$(RM) $(call platformpth, $(libDir)/*)
+	$(RM) $(call platformpth, include/*)
+	cd vendor/raylib-cpp/vendor/raylib/src $(THEN) "$(MAKE)" clean
 ```
