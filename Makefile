@@ -43,6 +43,7 @@ else
 		platform := linux
 		CXX ?= g++
 		linkFlags += -l GL -l m -l pthread -l dl -l rt -l X11
+		libGenDir := src
 	endif
 	ifeq ($(UNAMEOS), Darwin)
 		# Set macOS macros
