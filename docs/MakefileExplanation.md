@@ -117,8 +117,7 @@ include: submodules
 	...
 ```
 
-`submodules` is a very simple target that will update the git submodules in the project recursively, pulling in the current raylib-cpp repository under the `/vendor` directory and then raylib itself under its own `/vendor` directory. The reason for this, is to make sure that the pulled versions of raylib and the bindings match in version. You can [read more about git submodules here](https://git-scm.com/book/en/v2/Git-Tools-Submodules).
-
+`submodules` is a very simple target that will update the git submodules in the project recursively, pulling in the current raylib and raylib-cpp repositories. You can [read more about git submodules here](https://git-scm.com/book/en/v2/Git-Tools-Submodules).
 ```Makefile
 submodules:
 	git submodule update --init --recursive
@@ -133,8 +132,8 @@ Next, the target proceeds to call another custom function, `COPY` (a platform ag
 ```Makefile
 include: submodules
 	$(MKDIR) $(call platformpth, ./include)
-	$(call COPY,vendor/raylib-cpp/vendor/raylib/src,./include,raylib.h)
-	$(call COPY,vendor/raylib-cpp/vendor/raylib/src,./include,raymath.h)
+	$(call COPY,vendor/raylib/src,./include,raylib.h)
+ 	$(call COPY,vendor/raylib/src,./include,raymath.h)
 	$(call COPY,vendor/raylib-cpp/include,./include,*.hpp)
 ```
 
@@ -145,12 +144,11 @@ Next, we create the `/lib` directory (and a subdirectory for your current platfo
 Moving on to the body of the target, we move into raylib's `/src` directory and immediately run Make on raylib. Once complete, this results in the creation of a static library file named `libraylib.a` (*which will appear in slightly different directories based on the platform you build it in for whatever reason...*).
 
 To complete the target, it then copies that library file into the relevant directory for your platform under `/lib`.
-
 ```Makefile
 lib: submodules
-	cd vendor/raylib-cpp/vendor/raylib/src $(THEN) "$(MAKE)" PLATFORM=PLATFORM_DESKTOP
-	$(MKDIR) $(call platformpth, $(libDir))
-	$(call COPY,vendor/raylib-cpp/vendor/raylib/$(libGenDir),$(libDir),libraylib.a)
+	cd vendor/raylib/src $(THEN) "$(MAKE)" PLATFORM=PLATFORM_DESKTOP
+ 	$(MKDIR) $(call platformpth, lib/$(platform))
+ 	$(call COPY,vendor/raylib/$(libGenDir),lib/$(platform),libraylib.a)
 ```
 
 Once all of these targets have been fulfilled, `setup` ends and your project should now contain a copy of the relevant static library for your platform in `/lib`, and all the necessary header files under `/include`.
