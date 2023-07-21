@@ -21,7 +21,7 @@ jobs:
     name: Windows (${{ matrix.compiler }})
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - uses: msys2/setup-msys2@v2
       with:
         msystem: ${{ matrix.sys }}
@@ -32,7 +32,7 @@ jobs:
       run: CXX=${{ matrix.compiler }} make build
       shell: cmd
     - name: 'Export binary'
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
           name: app.exe
           path: bin/windows/app.exe
