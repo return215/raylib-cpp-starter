@@ -9,21 +9,24 @@ on:
     
 jobs:
   build:
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler:
+        - g++
+        - clang++
+    name: macOS (${{ matrix.compiler }})
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v2
     - name: Setting up
-      run: make setup
-    - name: "Building with default compiler (Clang++)"
-      run: make build
+      run: CXX=${{ matrix.compiler }} make setup
+    - name: Building with ${{ matrix.compiler }}
+      run: CXX=${{ matrix.compiler }} make build
     - name: 'Export binary'
       uses: actions/upload-artifact@v2
       with:
           name: app
           path: bin/mac/app
-    - name: Cleaning up for fresh build
-      run: make clean
-    - name: "Building with GCC/G++"
-      run: make build CXX=g++
     - name: Final cleaning
       run: make clean && make clean-lib

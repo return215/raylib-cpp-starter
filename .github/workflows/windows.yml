@@ -9,26 +9,33 @@ on:
     
 jobs:
   build:
+    strategy:
+      fail-fast: false
+      matrix:
+        sys:
+        - mingw64
+        - clang64
+        compiler:
+        - g++
+        - clang++
+    name: Windows (${{ matrix.compiler }})
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v2
+    - uses: msys2/setup-msys2@v2
+      with:
+        msystem: ${{ matrix.sys }}
     - name: Setting up
-      run: mingw32-make setup
+      run: CXX=${{ matrix.compiler }} make setup
       shell: cmd
     - name: Building with default compiler (G++/GCC)
-      run: mingw32-make build
+      run: CXX=${{ matrix.compiler }} make build
       shell: cmd
     - name: 'Export binary'
       uses: actions/upload-artifact@v2
       with:
           name: app.exe
           path: bin/windows/app.exe
-    - name: "Cleaning up for freesh build"
-      run: mingw32-make clean
-      shell: cmd
-    - name: "Building with Clang++"
-      run: mingw32-make build CXX=clang++
-      shell: cmd
     - name: "Final cleaning"
-      run: mingw32-make clean && mingw32-make clean-lib
+      run: make clean && make clean-lib
       shell: cmd

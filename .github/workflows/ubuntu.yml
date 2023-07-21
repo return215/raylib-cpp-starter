@@ -9,6 +9,13 @@ on:
     
 jobs:    
   build:
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler:
+        - g++
+        - clang++
+    name: Ubuntu (${{ matrix.compiler }})
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -17,17 +24,13 @@ jobs:
     - name: Install raylib dependencies
       run: sudo apt install libasound2-dev mesa-common-dev libx11-dev libxrandr-dev libxi-dev xorg-dev libgl1-mesa-dev libglu1-mesa-dev
     - name: Setting up
-      run: make setup
-    - name: "Building with default compiler (GCC/G++)"
-      run: make build
+      run: CXX=${{ matrix.compiler }} make setup
+    - name: Building with ${{ matrix.compiler }}
+      run: CXX=${{ matrix.compiler }} make build
     - name: 'Export binary'
       uses: actions/upload-artifact@v2
       with:
           name: app
           path: bin/linux/app
-    - name: Cleaning up for fresh build
-      run: make clean
-    - name: "Building with Clang++"
-      run: make build CXX=clang++
     - name: Final cleaning
       run: make clean && make clean-lib
