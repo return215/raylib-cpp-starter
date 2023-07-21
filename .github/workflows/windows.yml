@@ -26,10 +26,10 @@ jobs:
       with:
         msystem: ${{ matrix.sys }}
     - name: Setting up
-      run: CXX=${{ matrix.compiler }} make setup
+      run: "set CXX=${{ matrix.compiler }} & make setup"
       shell: cmd
     - name: Building with default compiler (G++/GCC)
-      run: CXX=${{ matrix.compiler }} make build
+      run: "set CXX=${{ matrix.compiler }} & make build"
       shell: cmd
     - name: 'Export binary'
       uses: actions/upload-artifact@v3
