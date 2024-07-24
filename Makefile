@@ -1,5 +1,5 @@
-# Copyright (c) 2020 Jonathan Moallem (@J-Mo63) & Aryeh Zinn (@Raelr)
-# 
+# Copyright (c) 2020-present Caps Collective & contributors
+# Originally authored by Jonathan Moallem (@jonjondev) & Aryeh Zinn (@Raelr)
 # Modifications made by @return215 to fit customized workflow
 #
 # This code is released under an unmodified zlib license.
